@@ -125,7 +125,17 @@ public:
 		stack<shared_ptr<Node>> nodeStack;
 		auto current = root_;
 		while (current)
+		{
+			current->flag = false;
 			nodeStack.push(current);
+			current = current->l_;
+		}
+		while (!nodeStack.empty())
+		{
+			current = nodeStack.top();
+			nodeStack.pop();
+
+		}
 	}
 
 private:
