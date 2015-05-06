@@ -28,7 +28,7 @@ private:
 		shared_ptr<Node> l_{ nullptr };
 		shared_ptr<Node> r_{ nullptr };
 		unique_ptr<T> v_{ nullptr };
-		bool flag{ false; } // flag used in non-recursion postorder tree walk
+		bool flag_ { false }; // flag used in non-recursion postorder tree walk
 
 		Node(){}
 		Node(const T& v) : v_(new T(v)){}
@@ -126,15 +126,28 @@ public:
 		auto current = root_;
 		while (current)
 		{
-			current->flag = false;
+			current->flag_ = false;
 			nodeStack.push(current);
 			current = current->l_;
 		}
 		while (!nodeStack.empty())
 		{
 			current = nodeStack.top();
-			nodeStack.pop();
-
+			if (current->flag_)
+			{
+				out << *current << " ";
+				nodeStack.pop();
+			}
+			else
+			{
+				current->flag_ = true;
+				current = current->r_;
+				while (current)
+				{
+					nodeStack.push(current);
+					current = current->l_;
+				}
+			}
 		}
 	}
 

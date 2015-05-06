@@ -23,6 +23,8 @@ int _tmain(int argc, _TCHAR* argv[])
 		bst.insert(i);
 		bst.insert(10 - i);
 	}
+	bst.inorder_r(cout);
+	cout << endl;
 	bst.inorder_nr(cout);
 	cout << endl;
 	bst.preorder_r(cout);
@@ -30,6 +32,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	bst.preorder_nr(cout);
 	cout << endl;
 	bst.postorder_r(cout);
+	cout << endl;
+	bst.postorder_nr(cout);
 	cout << endl;
 	system("pause");
 	return 0;
