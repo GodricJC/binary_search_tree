@@ -4,6 +4,7 @@
 #include <memory>
 #include <ostream>
 #include <stack>
+#include <stdexcept>
 
 using std::shared_ptr;
 using std::unique_ptr;
@@ -17,7 +18,7 @@ using std::stack;
 template <typename T>
 class BinarySearchTree
 {
-private:
+public:
 	struct Node
 	{
 		/*
@@ -37,6 +38,10 @@ private:
 		bool operator<(const Node& rhs)
 		{
 			return *this->v_ < *rhs.v_;
+		}
+		bool isEqual(const Node& rhs)
+		{
+			return *this->v_ == *rhs.v_;
 		}
 		friend ostream& operator<<(ostream& out, const Node& n)
 		{
@@ -70,22 +75,22 @@ public:
 		}
 	}
 
-	void inorder_r(ostream& out)
+	void inorder_r(ostream& out) const 
 	{
 		inoder_r_impl(root_, out);
 	}
 
-	void preorder_r(ostream& out)
+	void preorder_r(ostream& out) const 
 	{
 		preorder_r_impl(root_, out);
 	}
 
-	void postorder_r(ostream& out)
+	void postorder_r(ostream& out) const 
 	{
 		postorder_r_impl(root_, out);
 	}
 
-	void inorder_nr(ostream& out)
+	void inorder_nr(ostream& out) const
 	{
 		stack <shared_ptr<Node>> nodeStack;
 		auto current = root_;
@@ -103,7 +108,7 @@ public:
 		}
 	}
 
-	void preorder_nr(ostream& out)
+	void preorder_nr(ostream& out) const 
 	{
 		stack<shared_ptr<Node>> nodeStack;
 		if (root_)
@@ -120,7 +125,7 @@ public:
 		}
 	}
 
-	void postorder_nr(ostream& out)
+	void postorder_nr(ostream& out) const 
 	{
 		stack<shared_ptr<Node>> nodeStack;
 		auto current = root_;
@@ -151,8 +156,72 @@ public:
 		}
 	}
 
+	const Node* search_r(const T& v) const
+	{
+		shared_ptr<Node> temp(new Node(v));
+		return search_r_impl(root_, temp);
+	}
+
+	const Node* search_nr(const T& v) const
+	{
+		shared_ptr<Node> temp(new Node(v));
+		auto current = root_;
+		while (current)
+		{
+			if (temp->isEqual(*current))
+				return current.get();
+			else if (*temp < *current)
+				current = current->l_;
+			else
+				current = current->r_;
+		}
+		return nullptr;
+	}
+
+	T minV() const
+	{
+		return minV_impl(root_);
+	}
+	
+	T  maxV() const
+	{
+		return maxV_impl(root_);
+	}
+
+	T successor(const T& v) const
+	{
+		auto temp = search_nr(v);
+		if (temp->r_)
+			return minV_impl(temp->r_);
+		auto p = temp->p_;
+		while (p && temp != p->l_.get())
+		{
+			temp = p;
+			p = p->p_;
+		}
+		if (!p)
+			throw std::runtime_error("No successor");
+		return *p->v_;
+	}
+
+	T predecessor(const T& v) const
+	{
+		auto temp = search_nr(v);
+		if (temp->l_)
+			return maxV_impl(temp->l_);
+		auto p = temp->p_;
+		while (p && temp == p->l_.get())
+		{
+			temp = p;
+			p = p->p_;
+		}
+		if (!p)
+			throw std::runtime_error("No predecessor");
+		return *p->v_;
+	}
+
 private:
-	void inoder_r_impl(shared_ptr<Node> root, ostream& out)
+	void inoder_r_impl(shared_ptr<Node> root, ostream& out) const
 	{
 		if (root)
 		{
@@ -162,7 +231,7 @@ private:
 		}
 	}
 
-	void preorder_r_impl(shared_ptr<Node> root, ostream& out)
+	void preorder_r_impl(shared_ptr<Node> root, ostream& out) const
 	{
 		if (root)
 		{
@@ -172,7 +241,7 @@ private:
 		}
 	}
 
-	void postorder_r_impl(shared_ptr<Node> root, ostream& out)
+	void postorder_r_impl(shared_ptr<Node> root, ostream& out) const
 	{
 		if (root)
 		{
@@ -180,6 +249,34 @@ private:
 			postorder_r_impl(root->r_, out);
 			cout << *root << " ";
 		}
+	}
+
+	const Node* search_r_impl(shared_ptr<Node> root, shared_ptr<Node> v) const
+	{
+		if (!root)
+			return nullptr;
+		if (v->isEqual(*root))
+			return root.get();
+		else if (*v < *root)
+			return search_r_impl(root->l_, v);
+		else
+			return search_r_impl(root->r_, v);
+	}
+
+	const T minV_impl(shared_ptr<Node> root) const
+	{
+		auto current = root;
+		while (current->l_)
+			current = current->l_;
+		return *current->v_;
+	}
+
+	const T maxV_impl(shared_ptr<Node> root) const
+	{
+		auto current = root;
+		while (current->r_)
+			current = current->r_;
+		return *current->v_;
 	}
 
 private:
