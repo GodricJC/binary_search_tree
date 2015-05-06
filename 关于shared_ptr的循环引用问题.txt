@@ -1,0 +1,76 @@
+shared_ptr的循环引用问题
+by Godric, 2015/05/05
+
+二插搜索树结点结构如下：
+	template <typename T>
+	class BinarySearchTree
+	{
+		struct Node
+		{
+			shared_ptr<Node> p_ { nullptr };				// 父节点
+			shared_ptr<Node> l_ { nullptr };				// 左孩子结点
+			shared_ptr<Node> r_ { nullptr };				// 右孩子结点
+			unique_ptr<T> v_ { nullptr };					// 结点值
+
+			Node(){}
+			Node(const T& v) : v_(new T(v)){}
+			~Node(){}
+
+			bool operator<(const Node& rhs)
+			{
+				return *this->v_ < *rhs.v_;
+			}
+			friend ostream& operator<<(ostream& out, const Node& n)
+			{
+				return out << *n.v_;
+			}
+		};
+		shared_ptr<Node> root_;								// 树的根节点
+
+		// ...
+	};
+此时，当BinarySearchTree被析构时(被delete或者出了作用域自动析构)，root_的引用计数-1
+但是，如果此时root_存在子节点，则子节点保持着对*root_的引用，导致root_的引用计数>0
+因此root_被析构，但是它所管理的对象(*root_)将不会被析构
+同样的道理，root_的子孙结点也不会被析构，甚至连引用计数都不会减少
+(因为*root_并未析构，而只有在root_被析构时，其成员变量才会被析构)
+试验如下：
+	class R
+	{
+	public:
+		shared_ptr<R> p_;
+		~R(){}
+	};
+	int main()
+	{
+		shared_ptr<R> r1(new R);
+		{
+			shared_ptr<R> r2(new R);
+			r2->p_ = r1;
+			r1->p_ = r2;
+			cout << "r1: "<<r1.use_count() << endl;			// 输出：2
+			cout << "r2: " << r2.use_count() << endl;		// 输出：2
+		}													// 
+		cout << "r2 is destructed" << endl;					
+		cout << r1.use_count() << endl;						// 输出：2，引用计数并未减少，因为*r2并未析构
+		cout << r1->p_.use_count() << endl;					// 输出：1，在r2出作用域时，引用计数-1
+	}
+
+为解决shared_ptr的引用计数问题，将二叉树的结点改为如下结构：
+	template <typename T>
+	class BinarySearchTree
+	{
+		struct Node
+		{
+			Node* p_{ nullptr };								// 父节点采用原生指针
+			shared_ptr<Node> l_{ nullptr };						// 左右子节点则仍然采用shared_ptr进行管理
+			shared_ptr<Node> r_{ nullptr };
+			unique_ptr<T> v_{ nullptr };
+			// ...
+		};
+		shared_ptr<Node> root_;									// root_仍然采用shared_ptr管理
+	};
+此时，当BinarySearchTree被析构时，由于root_是对它管理对象的唯一引用，该对象将被析构，同时导致一系列的连锁析构
+在这里，没有使用unique_ptr对root_和l_，r_进行管理的原因是在BinartSearchTree的其他操作中(如遍历)会引用各个结点
+当然，也可以使用unique_ptr进行管理，如果这样的话在BinarySearchTree的其他操作中就必须获取Node的原始指针进行操作了
+因为unique_ptr并不支持copy constructor和assignment operation
